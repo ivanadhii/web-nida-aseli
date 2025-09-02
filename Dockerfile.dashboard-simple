@@ -1,0 +1,27 @@
+FROM python:3.11-slim
+
+# Set working directory
+WORKDIR /app
+
+# Install curl untuk health check
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
+# Create directory for dashboard files
+RUN mkdir -p /app/dashboard
+
+# Copy dashboard files (will be mounted as volume)
+COPY dashboard/ /app/dashboard/
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+ENV API_BASE_URL=http://localhost:5000/api
+
+# Expose dashboard port
+EXPOSE 8080
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:8080/ || exit 1
+
+# Start simple HTTP server (http.server is built-in Python module)
+CMD ["python", "-m", "http.server", "8080", "--directory", "/app/dashboard"]

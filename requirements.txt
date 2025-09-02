@@ -1,0 +1,26 @@
+# Core MQTT and Database
+paho-mqtt==1.6.1
+
+# Web API Framework
+flask==2.3.2
+flask-cors==4.0.0
+
+# Sensor Libraries for Raspberry Pi
+pymodbus==3.4.1
+pyserial==3.5
+
+# DHT22 Sensor Libraries
+adafruit-circuitpython-dht==3.7.4
+RPi.GPIO==0.7.1
+
+# System Monitoring
+psutil==5.9.5
+
+# Data Processing
+json5==0.9.14
+
+# Optional: For production deployment
+gunicorn==21.2.0
+
+# Development Tools (optional)
+pytest==7.4.0

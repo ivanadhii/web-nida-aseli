@@ -1,0 +1,121 @@
+version: '3.8'
+
+services:
+  # MQTT Worker Service
+  mqtt-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.mqtt-worker
+    container_name: sensor-mqtt-worker
+    restart: unless-stopped
+    volumes:
+      - sensor_data:/app/data
+      - mqtt_logs:/app/logs
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DB_PATH=/app/data/sensor_monitoring.db
+      - MQTT_BROKER=mqtt.gatevans.com
+      - MQTT_PORT=1883
+    networks:
+      - sensor-network
+    depends_on:
+      - db-init
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sqlite3; conn = sqlite3.connect('/app/data/sensor_monitoring.db'); conn.close()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Web API Service
+  web-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.web-api
+    container_name: sensor-web-api
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    volumes:
+      - sensor_data:/app/data
+      - api_logs:/app/logs
+    environment:
+      - PYTHONUNBUFFERED=1
+      - FLASK_ENV=production
+      - FLASK_APP=web_api.py
+      - DB_PATH=/app/data/sensor_monitoring.db
+    networks:
+      - sensor-network
+    depends_on:
+      - mqtt-worker
+      - db-init   # ⬅️ tambahan
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+
+  # Dashboard Service (Static HTTP Server)
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile.dashboard-simple
+    container_name: sensor-dashboard
+    restart: unless-stopped
+    ports:
+      - "8080:8080"    # Dashboard - EXPOSE PORT 8080
+    environment:
+      - API_BASE_URL=http://web-api:5000/api
+    networks:
+      - sensor-network
+    depends_on:
+      - web-api
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Database Initialization Service
+  db-init:
+    image: python:3.11-slim
+    container_name: sensor-db-init
+    volumes:
+      - sensor_data:/app/data
+      - ./init_db.py:/app/init_db.py
+    environment:
+      - DB_PATH=/app/data/sensor_monitoring.db
+    command: python /app/init_db.py
+    networks:
+      - sensor-network
+
+  # Optional: Adminer for database management
+  adminer:
+    image: adminer:latest
+    container_name: sensor-adminer
+    restart: unless-stopped
+    ports:
+      - "8081:8080"    # Database admin - EXPOSE PORT 8081
+    networks:
+      - sensor-network
+    profiles:
+      - admin
+
+volumes:
+  # Use named volumes instead of bind mounts to avoid directory issues
+  sensor_data:
+    driver: local
+  mqtt_logs:
+    driver: local
+  api_logs:
+    driver: local
+
+networks:
+  sensor-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

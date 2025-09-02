@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arjasari Solar Monitoring System</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-solar-panel"></i> Arjasari Solar Monitoring</h1>
+            <p>Professional real-time monitoring untuk PZEM-016 (AC), PZEM-017 (DC), DHT22, System Resources, dan RACK</p>
+        </div>
+
+        <div class="status-bar">
+            <div class="status-item">
+                <div class="status-value" id="lastUpdate">--:--:--</div>
+                <div class="status-label">Last Update</div>
+            </div>
+            <div class="status-item">
+                <div class="status-value" id="totalRecords">---</div>
+                <div class="status-label">Total Records</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="controls-grid">
+                <div class="control-group">
+                    <label><i class="fas fa-clock"></i> Refresh Interval:</label>
+                    <select id="refreshInterval">
+                        <option value="5000">5 seconds</option>
+                        <option value="10000" selected>10 seconds</option>
+                        <option value="30000">30 seconds</option>
+                        <option value="60000">1 minute</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <button onclick="refreshData()">
+                        <i class="fas fa-sync"></i> Refresh Now
+                    </button>
+                </div>
+                <div class="control-group">
+                    <button onclick="toggleAutoRefresh()" id="autoRefreshBtn">
+                        <i class="fas fa-pause"></i> Pause Auto
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+            <!-- Power Flow Diagram Card -->
+            <div class="card col-span-12">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <div class="card-icon icon-flow">
+                            <i class="fas fa-bolt"></i>
+                        </div>
+                        Power Flow Diagram
+                    </h3>
+                    <span class="status-badge" id="powerFlowStatus">Loading...</span>
+                </div>
+                <div id="powerFlowDiagram">
+                    <div class="loading">Loading power flow data...</div>
+                </div>
+            </div>
+
+            <!-- PZEM-016 AC Card -->
+            <div class="card col-span-6">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <div class="card-icon icon-power">
+                            <i class="fas fa-plug"></i>
+                        </div>
+                        PZEM-016 (AC Power)
+                    </h3>
+                    <span class="status-badge" id="pzem016Status">Loading...</span>
+                </div>
+                <div id="pzem016Data">
+                    <div class="loading">Loading PZEM-016 data...</div>
+                </div>
+            </div>
+
+            <!-- PZEM-017 DC Card -->
+            <div class="card col-span-6">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <div class="card-icon icon-solar">
+                            <i class="fas fa-sun"></i>
+                        </div>
+                        PZEM-017 (DC Power)
+                    </h3>
+                    <span class="status-badge" id="pzem017Status">Loading...</span>
+                </div>
+                <div id="pzem017Data">
+                    <div class="loading">Loading PZEM-017 data...</div>
+                </div>
+            </div>
+
+            <!-- RACK Card -->
+            <div class="card col-span-6">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <div class="card-icon icon-rack">
+                            <i class="fas fa-server"></i>
+                        </div>
+                        RACK Monitoring
+                    </h3>
+                    <span class="status-badge" id="rackStatus">Loading...</span>
+                </div>
+                <div id="rackData">
+                    <div class="loading">Loading RACK data...</div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="rackChart"></canvas>
+                </div>
+            </div>
+
+            <!-- DHT22 Card -->
+            <div class="card col-span-6">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <div class="card-icon icon-temp">
+                            <i class="fas fa-thermometer-half"></i>
+                        </div>
+                        DHT22 (Environment)
+                    </h3>
+                    <span class="status-badge" id="dht22Status">Loading...</span>
+                </div>
+                <div id="dht22Data">
+                    <div class="loading">Loading DHT22 data...</div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="dht22Chart"></canvas>
+                </div>
+            </div>
+
+            <!-- Analysis Card -->
+            <div class="card col-span-12">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <div class="card-icon icon-analysis">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        System Analysis
+                    </h3>
+                    <span class="status-badge" id="analysisStatus">Loading...</span>
+                </div>
+                <div id="analysisData">
+                    <div class="loading">Loading analysis data...</div>
+                </div>
+            </div>
+
+            <!-- System Resources Card -->
+            <div class="card col-span-12">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <div class="card-icon icon-system">
+                            <i class="fas fa-microchip"></i>
+                        </div>
+                        System Resources
+                    </h3>
+                    <span class="status-badge" id="systemStatus">Loading...</span>
+                </div>
+                <div id="systemData">
+                    <div class="loading">Loading System data...</div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="systemChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

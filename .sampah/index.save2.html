@@ -1,0 +1,1529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arjasari Solar Monitoring System</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --primary-dark: #1e40af;
+            --secondary-color: #f59e0b;
+            --success-color: #10b981;
+            --error-color: #ef4444;
+            --warning-color: #f59e0b;
+            --info-color: #06b6d4;
+            --dark-bg: #0f172a;
+            --card-bg: #ffffff;
+            --surface-color: #f8fafc;
+            --border-color: #e2e8f0;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-muted: #94a3b8;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, var(--dark-bg) 0%, #1e293b 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        /* Header Styles */
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 32px;
+            padding: 32px 0;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            background: linear-gradient(135deg, #60a5fa, #34d399);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            font-weight: 400;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Status Bar */
+        .status-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .status-item {
+            background: var(--card-bg);
+            padding: 24px;
+            border-radius: 16px;
+            box-shadow: var(--shadow-lg);
+            text-align: center;
+            border: 1px solid var(--border-color);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .status-item:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-xl);
+        }
+
+        .status-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 8px;
+        }
+
+        .status-label {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Controls */
+        .controls {
+            background: var(--card-bg);
+            padding: 20px 24px;
+            border-radius: 16px;
+            box-shadow: var(--shadow-md);
+            margin-bottom: 32px;
+            border: 1px solid var(--border-color);
+        }
+
+        .controls-grid {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .control-group label {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+        }
+
+        .control-group select,
+        .control-group button {
+            padding: 10px 16px;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            background: white;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .control-group button {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .control-group button:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .control-group select:focus,
+        .control-group button:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+            border-color: var(--primary-color);
+        }
+
+        /* Dashboard Grid */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        /* Card Styles */
+        .card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 28px;
+            box-shadow: var(--shadow-lg);
+            border: 1px solid var(--border-color);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-xl);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid var(--surface-color);
+        }
+
+        .card-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .card-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        .icon-solar { background: linear-gradient(135deg, #fbbf24, #f59e0b); color: white; }
+        .icon-power { background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; }
+        .icon-temp { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; }
+        .icon-system { background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white; }
+        .icon-flow { background: linear-gradient(135deg, #10b981, #059669); color: white; }
+        .icon-analysis { background: linear-gradient(135deg, #06b6d4, #0891b2); color: white; }
+
+        /* Status Badges */
+        .status-badge {
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-success {
+            background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+            color: #166534;
+            border: 1px solid #86efac;
+        }
+
+        .status-error {
+            background: linear-gradient(135deg, #fecaca, #fca5a5);
+            color: #991b1b;
+            border: 1px solid #f87171;
+        }
+
+        .status-warning {
+            background: linear-gradient(135deg, #fef3c7, #fde68a);
+            color: #92400e;
+            border: 1px solid #fbbf24;
+        }
+
+        /* Sensor Readings */
+        .sensor-reading {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 16px 0;
+            padding: 16px 20px;
+            background: var(--surface-color);
+            border-radius: 12px;
+            border-left: 4px solid var(--primary-color);
+            transition: background-color 0.2s ease;
+        }
+
+        .sensor-reading:hover {
+            background: #f1f5f9;
+        }
+
+        .reading-label {
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .reading-value {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .reading-unit {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        /* Chart Container */
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin-top: 24px;
+            padding: 16px;
+            background: var(--surface-color);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        /* Power Flow Styles */
+        .power-flow-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 24px;
+            background: var(--surface-color);
+            border-radius: 12px;
+            margin: 16px 0;
+            border: 1px solid var(--border-color);
+        }
+
+        .power-node {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: var(--shadow-md);
+            min-width: 140px;
+            border: 2px solid var(--border-color);
+            transition: transform 0.2s ease;
+        }
+
+        .power-node:hover {
+            transform: scale(1.05);
+        }
+
+        .power-node-icon {
+            font-size: 2.5rem;
+            margin-bottom: 12px;
+        }
+
+        .power-node-label {
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            font-size: 1rem;
+        }
+
+        .power-node-value {
+            font-size: 1.3rem;
+            color: var(--primary-color);
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .power-node-detail {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .power-arrow {
+            font-size: 2.5rem;
+            color: var(--success-color);
+            animation: pulse 2s infinite;
+            transition: color 0.3s ease;
+        }
+
+        .power-arrow.inactive {
+            color: var(--text-muted);
+            animation: none;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+        }
+
+        /* Efficiency Display */
+        .efficiency-display {
+            text-align: center;
+            padding: 24px;
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+            color: white;
+            border-radius: 16px;
+            margin: 20px 0;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .efficiency-value {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .efficiency-label {
+            font-size: 1rem;
+            opacity: 0.9;
+            font-weight: 500;
+        }
+
+        /* Analysis Section */
+        .analysis-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .analysis-card {
+            background: var(--surface-color);
+            border-radius: 12px;
+            padding: 20px;
+            border-left: 4px solid var(--info-color);
+            border: 1px solid var(--border-color);
+        }
+
+        .analysis-title {
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 16px;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Alert and Insight Items */
+        .alert-item {
+            background: linear-gradient(135deg, #fef3c7, #fde68a);
+            border: 1px solid #fbbf24;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin: 8px 0;
+            color: #92400e;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .alert-item.error {
+            background: linear-gradient(135deg, #fecaca, #fca5a5);
+            border-color: #f87171;
+            color: #991b1b;
+        }
+
+        .insight-item {
+            background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+            border: 1px solid #60a5fa;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin: 8px 0;
+            color: #1e40af;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Grid Layout Classes */
+        .col-span-12 { grid-column: span 12; }
+        .col-span-6 { grid-column: span 6; }
+        .col-span-4 { grid-column: span 4; }
+        .col-span-3 { grid-column: span 3; }
+
+        /* Timestamp */
+        .timestamp {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            text-align: right;
+            margin-top: 16px;
+            font-weight: 500;
+        }
+
+        /* Loading and Error States */
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        .loading::after {
+            content: '';
+            display: block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--border-color);
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 20px auto 0;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: linear-gradient(135deg, #fecaca, #fca5a5);
+            color: #991b1b;
+            padding: 16px 20px;
+            border-radius: 8px;
+            margin: 12px 0;
+            border: 1px solid #f87171;
+            font-weight: 500;
+        }
+
+        /* Raw Data */
+        .raw-data {
+            background: var(--dark-bg);
+            color: #e2e8f0;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 12px 0;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 0.85rem;
+            overflow-x: auto;
+            border: 1px solid #334155;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            .col-span-6 { grid-column: span 12; }
+            .col-span-4 { grid-column: span 6; }
+            .col-span-3 { grid-column: span 6; }
+        }
+
+        @media (max-width: 768px) {
+            .container { padding: 16px; }
+            .header h1 { font-size: 2.5rem; }
+            .header p { font-size: 1rem; }
+            .dashboard-grid { grid-template-columns: 1fr; gap: 16px; }
+            .col-span-12, .col-span-6, .col-span-4, .col-span-3 { grid-column: span 1; }
+            .power-flow-container { flex-direction: column; gap: 16px; }
+            .power-arrow { transform: rotate(90deg); }
+            .analysis-section { grid-template-columns: 1fr; }
+            .chart-container { height: 300px; }
+            .controls-grid { flex-direction: column; align-items: stretch; }
+            .control-group { justify-content: space-between; }
+        }
+
+        @media (max-width: 480px) {
+            .status-bar { grid-template-columns: 1fr; }
+            .sensor-reading { flex-direction: column; gap: 8px; text-align: center; }
+            .reading-value { font-size: 1.8rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-solar-panel"></i> Arjasari Solar Monitoring</h1>
+            <p>Professional real-time monitoring untuk PZEM-016 (AC), PZEM-017 (DC), DHT22, dan System Resources</p>
+        </div>
+
+        <div class="status-bar">
+            <div class="status-item">
+                <div class="status-value" id="lastUpdate">--:--:--</div>
+                <div class="status-label">Last Update</div>
+            </div>
+            <div class="status-item">
+                <div class="status-value" id="totalRecords">---</div>
+                <div class="status-label">Total Records</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="controls-grid">
+                <div class="control-group">
+                    <label><i class="fas fa-clock"></i> Refresh Interval:</label>
+                    <select id="refreshInterval">
+                        <option value="5000">5 seconds</option>
+                        <option value="10000" selected>10 seconds</option>
+                        <option value="30000">30 seconds</option>
+                        <option value="60000">1 minute</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <button onclick="refreshData()">
+                        <i class="fas fa-sync"></i> Refresh Now
+                    </button>
+                </div>
+                <div class="control-group">
+                    <button onclick="toggleAutoRefresh()" id="autoRefreshBtn">
+                        <i class="fas fa-pause"></i> Pause Auto
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+            <!-- Power Flow Diagram Card -->
+            <div class="card col-span-12">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <div class="card-icon icon-flow">
+                            <i class="fas fa-bolt"></i>
+                        </div>
+                        Power Flow Diagram
+                    </h3>
+                    <span class="status-badge" id="powerFlowStatus">Loading...</span>
+                </div>
+                <div id="powerFlowDiagram">
+                    <div class="loading">Loading power flow data...</div>
+                </div>
+            </div>
+
+            <!-- PZEM-016 AC Card -->
+            <div class="card col-span-6">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <div class="card-icon icon-power">
+                            <i class="fas fa-plug"></i>
+                        </div>
+                        PZEM-016 (AC Power)
+                    </h3>
+                    <span class="status-badge" id="pzem016Status">Loading...</span>
+                </div>
+                <div id="pzem016Data">
+                    <div class="loading">Loading PZEM-016 data...</div>
+                </div>
+            </div>
+
+            <!-- PZEM-017 DC Card -->
+            <div class="card col-span-6">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <div class="card-icon icon-solar">
+                            <i class="fas fa-sun"></i>
+                        </div>
+                        PZEM-017 (DC Power)
+                    </h3>
+                    <span class="status-badge" id="pzem017Status">Loading...</span>
+                </div>
+                <div id="pzem017Data">
+                    <div class="loading">Loading PZEM-017 data...</div>
+                </div>
+            </div>
+
+            <!-- Analysis Card -->
+            <div class="card col-span-12">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <div class="card-icon icon-analysis">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        System Analysis
+                    </h3>
+                    <span class="status-badge" id="analysisStatus">Loading...</span>
+                </div>
+                <div id="analysisData">
+                    <div class="loading">Loading analysis data...</div>
+                </div>
+            </div>
+
+            <!-- DHT22 Card -->
+            <div class="card col-span-6">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <div class="card-icon icon-temp">
+                            <i class="fas fa-thermometer-half"></i>
+                        </div>
+                        DHT22 (Environment)
+                    </h3>
+                    <span class="status-badge" id="dht22Status">Loading...</span>
+                </div>
+                <div id="dht22Data">
+                    <div class="loading">Loading DHT22 data...</div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="dht22Chart"></canvas>
+                </div>
+            </div>
+
+            <!-- System Resources Card -->
+            <div class="card col-span-6">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <div class="card-icon icon-system">
+                            <i class="fas fa-server"></i>
+                        </div>
+                        System Resources
+                    </h3>
+                    <span class="status-badge" id="systemStatus">Loading...</span>
+                </div>
+                <div id="systemData">
+                    <div class="loading">Loading System data...</div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="systemChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration for Docker setup
+        const API_BASE = 'http://localhost:5000/api';
+        let autoRefreshEnabled = true;
+        let refreshTimer = null;
+        let dht22Chart = null;
+        let systemChart = null;
+
+        // Initialize charts with professional styling
+        function initCharts() {
+            const chartOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            usePointStyle: true,
+                            padding: 20,
+                            font: {
+                                size: 13,
+                                weight: '600'
+                            }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                        titleColor: '#f8fafc',
+                        bodyColor: '#f8fafc',
+                        borderColor: '#334155',
+                        borderWidth: 1,
+                        cornerRadius: 8,
+                        padding: 12
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            color: '#e2e8f0',
+                            lineWidth: 1
+                        },
+                        ticks: {
+                            color: '#64748b',
+                            font: { size: 12 }
+                        }
+                    },
+                    y: {
+                        grid: {
+                            color: '#e2e8f0',
+                            lineWidth: 1
+                        },
+                        ticks: {
+                            color: '#64748b',
+                            font: { size: 12 }
+                        }
+                    }
+                }
+            };
+
+            // DHT22 Chart
+            const dht22Ctx = document.getElementById('dht22Chart').getContext('2d');
+            dht22Chart = new Chart(dht22Ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Temperature (°C)',
+                        data: [],
+                        borderColor: '#ef4444',
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: '#ef4444',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 2,
+                        pointRadius: 5,
+                        yAxisID: 'y'
+                    }, {
+                        label: 'Humidity (%)',
+                        data: [],
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: '#3b82f6',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 2,
+                        pointRadius: 5,
+                        yAxisID: 'y1'
+                    }]
+                },
+                options: {
+                    ...chartOptions,
+                    scales: {
+                        ...chartOptions.scales,
+                        y: {
+                            ...chartOptions.scales.y,
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            min: 10,
+                            max: 70,
+                            title: { 
+                                display: true, 
+                                text: 'Temperature (°C)',
+                                color: '#64748b',
+                                font: { size: 13, weight: '600' }
+                            }
+                        },
+                        y1: {
+                            ...chartOptions.scales.y,
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            min: 10,
+                            max: 100,
+                            title: { 
+                                display: true, 
+                                text: 'Humidity (%)',
+                                color: '#64748b',
+                                font: { size: 13, weight: '600' }
+                            },
+                            grid: { drawOnChartArea: false }
+                        }
+                    }
+                }
+            });
+
+            // System Chart
+            const systemCtx = document.getElementById('systemChart').getContext('2d');
+            systemChart = new Chart(systemCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'RAM Usage (%)',
+                        data: [],
+                        borderColor: '#8b5cf6',
+                        backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: '#8b5cf6',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 2,
+                        pointRadius: 5
+                    }, {
+                        label: 'CPU Usage (%)',
+                        data: [],
+                        borderColor: '#f59e0b',
+                        backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: '#f59e0b',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 2,
+                        pointRadius: 5
+                    }, {
+                        label: 'Storage Usage (%)',
+                        data: [],
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: '#10b981',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 2,
+                        pointRadius: 5
+                    }]
+                },
+                options: {
+                    ...chartOptions,
+                    scales: {
+                        ...chartOptions.scales,
+                        y: {
+                            ...chartOptions.scales.y,
+                            beginAtZero: true,
+                            max: 100,
+                            title: { 
+                                display: true, 
+                                text: 'Usage (%)',
+                                color: '#64748b',
+                                font: { size: 13, weight: '600' }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Fetch latest data
+        async function fetchLatestData() {
+            try {
+                const response = await fetch(`${API_BASE}/latest?limit=20`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    updateDashboard(result.data);
+                    updateCharts();
+                } else {
+                    showError('Failed to fetch data: ' + result.error);
+                }
+            } catch (error) {
+                showError('Network error: ' + error.message);
+            }
+        }
+
+        // Fetch summary data
+        async function fetchSummary() {
+            try {
+                const response = await fetch(`${API_BASE}/summary`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    updateStatusBar(result.data);
+                }
+            } catch (error) {
+                console.error('Error fetching summary:', error);
+            }
+        }
+
+        // Fetch power flow data
+        async function fetchPowerFlow() {
+            try {
+                const response = await fetch(`${API_BASE}/power_flow`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    updatePowerFlowDiagram(result.data);
+                }
+            } catch (error) {
+                console.error('Error fetching power flow:', error);
+            }
+        }
+
+        // Fetch analysis data
+        async function fetchAnalysis() {
+            try {
+                const response = await fetch(`${API_BASE}/analysis`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    updateAnalysisSection(result.data);
+                }
+            } catch (error) {
+                console.error('Error fetching analysis:', error);
+            }
+        }
+
+        // Update dashboard with latest data
+        function updateDashboard(data) {
+            updateLastUpdateTime();
+            
+            // Update PZEM-016 AC
+            if (data.pzem_ac && data.pzem_ac.length > 0) {
+                const latest = data.pzem_ac[0];
+                updatePZEMCard('pzem016', latest);
+            }
+            
+            // Update PZEM-017 DC
+            if (data.pzem_dc && data.pzem_dc.length > 0) {
+                const latest = data.pzem_dc[0];
+                updatePZEMCard('pzem017', latest);
+            }
+            
+            // Update DHT22
+            if (data.dht22 && data.dht22.length > 0) {
+                const latest = data.dht22[0];
+                updateDHT22Card(latest);
+            }
+            
+            // Update System
+            if (data.system && data.system.length > 0) {
+                const latest = data.system[0];
+                updateSystemCard(latest);
+            }
+        }
+
+        // Update PZEM card with parsed data
+        function updatePZEMCard(deviceId, data) {
+            const statusEl = document.getElementById(`${deviceId}Status`);
+            const dataEl = document.getElementById(`${deviceId}Data`);
+            
+            // Update status badge
+            statusEl.className = `status-badge status-${data.status === 'success' ? 'success' : 'error'}`;
+            statusEl.textContent = data.status === 'success' ? 'Online' : 'Error';
+            
+            // Update data content
+            if (data.status === 'success') {
+                let content = '';
+                
+                // Show parsed data if available
+                if (data.parsed_data && data.parsed_data.status === 'success') {
+                    const parsed = data.parsed_data;
+                    
+                    if (deviceId === 'pzem016') {
+                        // PZEM-016 AC (Inverter to Load)
+                        content = `
+                            <div class="sensor-reading">
+                                <span class="reading-label">
+                                    <i class="fas fa-bolt"></i> AC Voltage
+                                </span>
+                                <span class="reading-value">${parsed.voltage_v} <span class="reading-unit">V</span></span>
+                            </div>
+                            <div class="sensor-reading">
+                                <span class="reading-label">
+                                    <i class="fas fa-plug"></i> AC Current
+                                </span>
+                                <span class="reading-value">${parsed.current_a} <span class="reading-unit">A</span></span>
+                            </div>
+                            <div class="sensor-reading">
+                                <span class="reading-label">
+                                    <i class="fas fa-lightbulb"></i> AC Power
+                                </span>
+                                <span class="reading-value">${parsed.power_w} <span class="reading-unit">W</span></span>
+                            </div>
+                            <div class="sensor-reading">
+                                <span class="reading-label">
+                                    <i class="fas fa-chart-bar"></i> Energy Consumed
+                                </span>
+                                <span class="reading-value">${parsed.energy_kwh} <span class="reading-unit">kWh</span></span>
+                            </div>
+                            <div class="sensor-reading">
+                                <span class="reading-label">
+                                    <i class="fas fa-wave-square"></i> Frequency
+                                </span>
+                                <span class="reading-value">${parsed.frequency_hz} <span class="reading-unit">Hz</span></span>
+                            </div>
+                            <div class="sensor-reading">
+                                <span class="reading-label">
+                                    <i class="fas fa-signal"></i> Power Factor
+                                </span>
+                                <span class="reading-value">${parsed.power_factor}</span>
+                            </div>
+                        `;
+                        
+                        if (parsed.alarm_status === 'ON') {
+                            content += `<div class="alert-item error">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                ALARM: System alarm is active!
+                            </div>`;
+                        }
+                    } else if (deviceId === 'pzem017') {
+                        // PZEM-017 DC (Solar to SCC)
+                        content = `
+                            <div class="sensor-reading">
+                                <span class="reading-label">
+                                    <i class="fas fa-sun"></i> Solar Voltage
+                                </span>
+                                <span class="reading-value">${parsed.voltage_v} <span class="reading-unit">V</span></span>
+                            </div>
+                            <div class="sensor-reading">
+                                <span class="reading-label">
+                                    <i class="fas fa-battery-half"></i> Solar Current
+                                </span>
+                                <span class="reading-value">${parsed.current_a} <span class="reading-unit">A</span></span>
+                            </div>
+                            <div class="sensor-reading">
+                                <span class="reading-label">
+                                    <i class="fas fa-bolt"></i> Solar Power
+                                </span>
+                                <span class="reading-value">${parsed.power_w} <span class="reading-unit">W</span></span>
+                            </div>
+                            <div class="sensor-reading">
+                                <span class="reading-label">
+                                    <i class="fas fa-chart-line"></i> Energy Generated
+                                </span>
+                                <span class="reading-value">${parsed.energy_kwh} <span class="reading-unit">kWh</span></span>
+                            </div>
+                            <div class="sensor-reading">
+                                <span class="reading-label">
+                                    <i class="fas fa-solar-panel"></i> Solar Status
+                                </span>
+                                <span class="reading-value">${parsed.solar_status}</span>
+                            </div>
+                        `;
+                        
+                        if (parsed.over_voltage_alarm === 'ON') {
+                            content += `<div class="alert-item error">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                Over-voltage alarm active!
+                            </div>`;
+                        }
+                        if (parsed.under_voltage_alarm === 'ON') {
+                            content += `<div class="alert-item error">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                Under-voltage alarm active!
+                            </div>`;
+                        }
+                    }
+                    
+                    // Add raw data collapsible section
+                    content += `
+                        <details style="margin-top: 20px;">
+                            <summary style="cursor: pointer; font-weight: bold; color: var(--text-secondary); font-size: 0.9rem;">
+                                <i class="fas fa-cog"></i> Technical Details
+                            </summary>
+                            <div class="raw-data" style="margin-top: 12px;">
+                                <strong>Raw Registers:</strong><br>
+                                ${JSON.stringify(data.raw_registers, null, 2)}
+                            </div>
+                        </details>
+                    `;
+                } else {
+                    // Fallback to raw data only
+                    content = `
+                        <div class="sensor-reading">
+                            <span class="reading-label">
+                                <i class="fas fa-list-ol"></i> Register Count
+                            </span>
+                            <span class="reading-value">${data.register_count}</span>
+                        </div>
+                        <div class="sensor-reading">
+                            <span class="reading-label">
+                                <i class="fas fa-microchip"></i> Device Type
+                            </span>
+                            <span class="reading-value">${data.device_type}</span>
+                        </div>
+                        <div class="raw-data">
+                            <strong>Raw Registers:</strong><br>
+                            ${JSON.stringify(data.raw_registers, null, 2)}
+                        </div>
+                    `;
+                }
+                
+                content += `<div class="timestamp">
+                    <i class="fas fa-clock"></i> Last reading: ${formatTimestamp(data.timestamp)}
+                </div>`;
+                dataEl.innerHTML = content;
+            } else {
+                dataEl.innerHTML = `
+                    <div class="error">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <strong>Error:</strong> ${data.error_message || 'Unknown error'}
+                    </div>
+                    <div class="timestamp">
+                        <i class="fas fa-clock"></i> Last attempt: ${formatTimestamp(data.timestamp)}
+                    </div>
+                `;
+            }
+        }
+
+        // Update DHT22 card
+        function updateDHT22Card(data) {
+            const statusEl = document.getElementById('dht22Status');
+            const dataEl = document.getElementById('dht22Data');
+            
+            statusEl.className = `status-badge status-${data.status === 'success' ? 'success' : 'error'}`;
+            statusEl.textContent = data.status === 'success' ? 'Online' : 'Error';
+            
+            if (data.status === 'success') {
+                dataEl.innerHTML = `
+                    <div class="sensor-reading">
+                        <span class="reading-label">
+                            <i class="fas fa-thermometer-half"></i> Temperature
+                        </span>
+                        <span class="reading-value">${data.temperature}<span class="reading-unit">°C</span></span>
+                    </div>
+                    <div class="sensor-reading">
+                        <span class="reading-label">
+                            <i class="fas fa-tint"></i> Humidity
+                        </span>
+                        <span class="reading-value">${data.humidity}<span class="reading-unit">%</span></span>
+                    </div>
+                    <div class="sensor-reading">
+                        <span class="reading-label">
+                            <i class="fas fa-microchip"></i> GPIO Pin
+                        </span>
+                        <span class="reading-value">GPIO${data.gpio_pin}</span>
+                    </div>
+                    <div class="timestamp">
+                        <i class="fas fa-clock"></i> Last reading: ${formatTimestamp(data.timestamp)}
+                    </div>
+                `;
+            } else {
+                dataEl.innerHTML = `
+                    <div class="error">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <strong>Error:</strong> ${data.error_message || 'Sensor read failed'}
+                    </div>
+                    <div class="timestamp">
+                        <i class="fas fa-clock"></i> Last attempt: ${formatTimestamp(data.timestamp)}
+                    </div>
+                `;
+            }
+        }
+
+        // Update System card
+        function updateSystemCard(data) {
+            const statusEl = document.getElementById('systemStatus');
+            const dataEl = document.getElementById('systemData');
+            
+            statusEl.className = `status-badge status-${data.status === 'success' ? 'success' : 'error'}`;
+            statusEl.textContent = data.status === 'success' ? 'Online' : 'Error';
+            
+            if (data.status === 'success') {
+                dataEl.innerHTML = `
+                    <div class="sensor-reading">
+                        <span class="reading-label">
+                            <i class="fas fa-memory"></i> RAM Usage
+                        </span>
+                        <span class="reading-value">${data.ram_usage_percent}<span class="reading-unit">%</span></span>
+                    </div>
+                    <div class="sensor-reading">
+                        <span class="reading-label">
+                            <i class="fas fa-microchip"></i> CPU Usage
+                        </span>
+                        <span class="reading-value">${data.cpu_usage_percent}<span class="reading-unit">%</span></span>
+                    </div>
+                    <div class="sensor-reading">
+                        <span class="reading-label">
+                            <i class="fas fa-hdd"></i> Storage Usage
+                        </span>
+                        <span class="reading-value">${data.storage_usage_percent}<span class="reading-unit">%</span></span>
+                    </div>
+                    <div class="sensor-reading">
+                        <span class="reading-label">
+                            <i class="fas fa-thermometer-quarter"></i> CPU Temperature
+                        </span>
+                        <span class="reading-value">${data.cpu_temperature}<span class="reading-unit">°C</span></span>
+                    </div>
+                    <div class="sensor-reading">
+                        <span class="reading-label">
+                            <i class="fas fa-database"></i> Storage
+                        </span>
+                        <span class="reading-value">${data.storage_used_gb}GB / ${data.storage_total_gb}GB</span>
+                    </div>
+                    <div class="timestamp">
+                        <i class="fas fa-clock"></i> Last reading: ${formatTimestamp(data.timestamp)}
+                    </div>
+                `;
+            } else {
+                dataEl.innerHTML = `
+                    <div class="error">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <strong>Error:</strong> ${data.error_message || 'System monitoring failed'}
+                    </div>
+                    <div class="timestamp">
+                        <i class="fas fa-clock"></i> Last attempt: ${formatTimestamp(data.timestamp)}
+                    </div>
+                `;
+            }
+        }
+
+        // Update power flow diagram
+        function updatePowerFlowDiagram(data) {
+            const statusEl = document.getElementById('powerFlowStatus');
+            const diagramEl = document.getElementById('powerFlowDiagram');
+            
+            statusEl.className = 'status-badge status-success';
+            statusEl.textContent = 'Active';
+            
+            const solarPower = data.solar_input.power_w || 0;
+            const acPower = data.ac_output.power_w || 0;
+            const efficiency = data.system_efficiency || 0;
+            
+            const solarStatus = solarPower > 1 ? 'active' : 'inactive';
+            const acStatus = acPower > 5 ? 'active' : 'inactive';
+            
+            diagramEl.innerHTML = `
+                <div class="power-flow-container">
+                    <div class="power-node">
+                        <div class="power-node-icon">☀️</div>
+                        <div class="power-node-label">Solar Panel</div>
+                        <div class="power-node-value">${solarPower}W</div>
+                        <div class="power-node-detail">
+                            ${data.solar_input.voltage_v || 0}V
+                        </div>
+                    </div>
+                    
+                    <div class="power-arrow ${solarStatus}">
+                        <i class="fas fa-arrow-right"></i>
+                    </div>
+                    
+                    <div class="power-node">
+                        <div class="power-node-icon">🔋</div>
+                        <div class="power-node-label">SCC</div>
+                        <div class="power-node-value">Charge Controller</div>
+                    </div>
+                    
+                    <div class="power-arrow ${acStatus}">
+                        <i class="fas fa-arrow-right"></i>
+                    </div>
+                    
+                    <div class="power-node">
+                        <div class="power-node-icon">🔄</div>
+                        <div class="power-node-label">Inverter</div>
+                        <div class="power-node-value">DC→AC</div>
+                    </div>
+                    
+                    <div class="power-arrow ${acStatus}">
+                        <i class="fas fa-arrow-right"></i>
+                    </div>
+                    
+                    <div class="power-node">
+                        <div class="power-node-icon">💡</div>
+                        <div class="power-node-label">AC Load</div>
+                        <div class="power-node-value">${acPower}W</div>
+                        <div class="power-node-detail">
+                            ${data.ac_output.voltage_v || 0}V
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Update analysis section
+        function updateAnalysisSection(data) {
+            const statusEl = document.getElementById('analysisStatus');
+            const analysisEl = document.getElementById('analysisData');
+            
+            statusEl.className = 'status-badge status-success';
+            statusEl.textContent = 'Updated';
+            
+            let analysisContent = '<div class="analysis-section">';
+            
+            // AC Analysis
+            if (data.ac_analysis) {
+                analysisContent += `
+                    <div class="analysis-card">
+                        <div class="analysis-title">
+                            <i class="fas fa-plug"></i> AC Power Analysis
+                        </div>
+                        <div class="sensor-reading">
+                            <span class="reading-label">Load Status:</span>
+                            <span class="reading-value">${data.ac_analysis.load_status || 'Unknown'}</span>
+                        </div>
+                        <div class="sensor-reading">
+                            <span class="reading-label">Voltage Status:</span>
+                            <span class="reading-value">${data.ac_analysis.voltage_status || 'Unknown'}</span>
+                        </div>
+                        <div class="sensor-reading">
+                            <span class="reading-label">Power Factor:</span>
+                            <span class="reading-value">${data.ac_analysis.power_factor_status || 'Unknown'}</span>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // DC Analysis
+            if (data.dc_analysis) {
+                analysisContent += `
+                    <div class="analysis-card">
+                        <div class="analysis-title">
+                            <i class="fas fa-sun"></i> Solar Generation Analysis
+                        </div>
+                        <div class="sensor-reading">
+                            <span class="reading-label">Generation:</span>
+                            <span class="reading-value">${data.dc_analysis.generation_status || 'Unknown'}</span>
+                        </div>
+                        <div class="sensor-reading">
+                            <span class="reading-label">Panel Condition:</span>
+                            <span class="reading-value">${data.dc_analysis.panel_condition || 'Unknown'}</span>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // System Efficiency
+            if (data.system_efficiency) {
+                analysisContent += `
+                    <div class="analysis-card">
+                        <div class="analysis-title">
+                            <i class="fas fa-chart-pie"></i> System Efficiency
+                        </div>
+                        <div class="sensor-reading">
+                            <span class="reading-label">Overall Efficiency:</span>
+                            <span class="reading-value">${data.system_efficiency.system_efficiency_percent}%</span>
+                        </div>
+                        <div class="sensor-reading">
+                            <span class="reading-label">Status:</span>
+                            <span class="reading-value">${data.system_efficiency.efficiency_status || 'Unknown'}</span>
+                        </div>
+                        <div class="sensor-reading">
+                            <span class="reading-label">Power Loss:</span>
+                            <span class="reading-value">${data.system_efficiency.power_loss_w || 0}W</span>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            analysisContent += '</div>';
+            
+            // Add alerts only (no insights)
+            if (data.alerts && data.alerts.length > 0) {
+                analysisContent += '<div class="analysis-title" style="margin-top: 24px;"><i class="fas fa-exclamation-triangle"></i> Active Alerts</div>';
+                data.alerts.forEach(alert => {
+                    const alertClass = alert.includes('🚨') ? 'error' : '';
+                    analysisContent += `<div class="alert-item ${alertClass}">
+                        <i class="fas fa-exclamation-triangle"></i> ${alert}
+                    </div>`;
+                });
+            }
+            
+            analysisEl.innerHTML = analysisContent;
+        }
+
+        // Update status bar
+        function updateStatusBar(summary) {
+            if (summary.total_records) {
+                document.getElementById('totalRecords').textContent = summary.total_records.toLocaleString();
+            }
+        }
+
+        // Update charts with time series data
+        async function updateCharts() {
+            try {
+                // Update DHT22 chart
+                const dht22Response = await fetch(`${API_BASE}/timeseries/dht22?hours=6`);
+                const dht22Result = await dht22Response.json();
+                
+                if (dht22Result.success && dht22Chart) {
+                    const data = dht22Result.data.filter(d => d.status === 'success');
+                    const labels = data.map(d => formatChartTime(d.timestamp));
+                    const temperatures = data.map(d => d.temperature);
+                    const humidities = data.map(d => d.humidity);
+                    
+                    dht22Chart.data.labels = labels;
+                    dht22Chart.data.datasets[0].data = temperatures;
+                    dht22Chart.data.datasets[1].data = humidities;
+                    dht22Chart.update();
+                }
+                
+                // Update System chart
+                const systemResponse = await fetch(`${API_BASE}/timeseries/system?hours=6`);
+                const systemResult = await systemResponse.json();
+                
+                if (systemResult.success && systemChart) {
+                    const data = systemResult.data.filter(d => d.status === 'success');
+                    const labels = data.map(d => formatChartTime(d.timestamp));
+                    const ramUsage = data.map(d => d.ram_usage_percent);
+                    const cpuUsage = data.map(d => d.cpu_usage_percent);
+                    const storageUsage = data.map(d => d.storage_usage_percent);
+                    
+                    systemChart.data.labels = labels;
+                    systemChart.data.datasets[0].data = ramUsage;
+                    systemChart.data.datasets[1].data = cpuUsage;
+                    systemChart.data.datasets[2].data = storageUsage;
+                    systemChart.update();
+                }
+            } catch (error) {
+                console.error('Error updating charts:', error);
+            }
+        }
+
+        // Utility functions
+        function updateLastUpdateTime() {
+            const now = new Date();
+            document.getElementById('lastUpdate').textContent = now.toLocaleTimeString();
+        }
+
+        function formatTimestamp(timestamp) {
+            const date = new Date(timestamp);
+            return date.toLocaleString();
+        }
+
+        function formatChartTime(timestamp) {
+            const date = new Date(timestamp);
+            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function showError(message) {
+            console.error(message);
+        }
+
+        // Controls
+        function refreshData() {
+            fetchLatestData();
+            fetchSummary();
+            fetchPowerFlow();
+            fetchAnalysis();
+        }
+
+        function toggleAutoRefresh() {
+            autoRefreshEnabled = !autoRefreshEnabled;
+            const btn = document.getElementById('autoRefreshBtn');
+            
+            if (autoRefreshEnabled) {
+                btn.innerHTML = '<i class="fas fa-pause"></i> Pause Auto';
+                startAutoRefresh();
+            } else {
+                btn.innerHTML = '<i class="fas fa-play"></i> Resume Auto';
+                if (refreshTimer) {
+                    clearInterval(refreshTimer);
+                }
+            }
+        }
+
+        function startAutoRefresh() {
+            if (refreshTimer) {
+                clearInterval(refreshTimer);
+            }
+            
+            const interval = parseInt(document.getElementById('refreshInterval').value);
+            refreshTimer = setInterval(() => {
+                if (autoRefreshEnabled) {
+                    refreshData();
+                }
+            }, interval);
+        }
+
+        // Event listeners
+        document.getElementById('refreshInterval').addEventListener('change', () => {
+            if (autoRefreshEnabled) {
+                startAutoRefresh();
+            }
+        });
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', () => {
+            initCharts();
+            refreshData();
+            startAutoRefresh();
+        });
+    </script>
+</body>
+</html>
