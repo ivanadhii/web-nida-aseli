@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-Simple MQTT Worker - Fixed Version
+Simple MQTT Worker - Fixed Version (Battery Parsing Fixed)
 """
 
 import time
 import json
 import logging
 import sqlite3
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Dict, Any
 import os
 
@@ -30,7 +30,7 @@ DB_PATH = os.environ.get('DB_PATH', '/app/data/sensor_monitoring.db')
 
 MQTT_TOPICS = [
     "arjasari/raspi/sensor/+",
-    "arjasari/raspi/resource/+", 
+    "arjasari/raspi/resource/+",
     "arjasari/raspi/all",
     "arjasari/rack/status",
     "arjasari/rack/lamp",
@@ -42,7 +42,7 @@ class DatabaseManager:
     def __init__(self, db_path: str = DB_PATH):
         self.db_path = db_path
         self.check_schema()
-    
+
     def check_schema(self):
         """Check if database has measurement_point column"""
         try:
@@ -52,21 +52,21 @@ class DatabaseManager:
             columns = [col[1] for col in cursor.fetchall()]
             self.has_measurement_point = 'measurement_point' in columns
             conn.close()
-            
+
             if self.has_measurement_point:
                 logger.info("✅ Database supports battery monitoring")
             else:
                 logger.warning("⚠️ Database needs migration for battery support")
-                
+
         except Exception as e:
             logger.error(f"Schema check failed: {e}")
             self.has_measurement_point = False
-    
+
     def insert_pzem_data(self, data: Dict[str, Any], measurement_point: str = None):
         """Insert PZEM data safely"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
-        
+
         try:
             # Parse data
             parsed_data = None
@@ -82,7 +82,7 @@ class DatabaseManager:
                             parsed_data = PZEMParser.parse_pzem017_dc(data['raw_registers'])
                 except Exception as e:
                     logger.error(f"Parse error: {e}")
-            
+
             # Insert based on schema
             if self.has_measurement_point:
                 cursor.execute('''
@@ -121,20 +121,20 @@ class DatabaseManager:
                     data.get('error_message'),
                     json.dumps(parsed_data) if parsed_data else None
                 ))
-            
+
             conn.commit()
             logger.info(f"Stored {data.get('device_type')} data: {data.get('status')}")
-            
+
         except Exception as e:
             logger.error(f"Insert PZEM error: {e}")
         finally:
             conn.close()
-    
+
     def insert_dht22_data(self, data: Dict[str, Any]):
         """Insert DHT22 data"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
-        
+
         try:
             cursor.execute('''
                 INSERT INTO dht22_data (
@@ -156,12 +156,12 @@ class DatabaseManager:
             logger.error(f"Insert DHT22 error: {e}")
         finally:
             conn.close()
-    
+
     def insert_system_data(self, data: Dict[str, Any]):
         """Insert system data"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
-        
+
         try:
             cursor.execute('''
                 INSERT INTO system_data (
@@ -187,15 +187,15 @@ class DatabaseManager:
             logger.error(f"Insert System error: {e}")
         finally:
             conn.close()
-    
+
     def insert_rack_data(self, data_type: str, payload: str):
         """Insert RACK data"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
-        
+
         try:
             timestamp = datetime.now().isoformat()
-            
+
             if data_type == 'dht':
                 try:
                     dht_data = json.loads(payload)
@@ -210,19 +210,19 @@ class DatabaseManager:
                     INSERT INTO rack_data (timestamp, data_type, status_value)
                     VALUES (?, ?, ?)
                 ''', (timestamp, data_type, payload.strip()))
-            
+
             conn.commit()
             logger.info(f"Stored RACK {data_type}: {payload[:50]}")
         except Exception as e:
             logger.error(f"Insert RACK error: {e}")
         finally:
             conn.close()
-    
+
     def insert_raw_message(self, topic: str, payload: str):
         """Insert raw MQTT message"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
-        
+
         try:
             cursor.execute('INSERT INTO mqtt_messages (topic, payload) VALUES (?, ?)', (topic, payload))
             conn.commit()
@@ -238,11 +238,11 @@ class MQTTWorker:
         self.client = None
         self.connected = False
         self.db_manager = DatabaseManager()
-        
+
         if not MQTT_AVAILABLE:
             logger.error("MQTT library not available")
             return
-        
+
         try:
             self.client = mqtt.Client()
             self.client.on_connect = self._on_connect
@@ -250,7 +250,7 @@ class MQTTWorker:
             self.client.on_message = self._on_message
         except Exception as e:
             logger.error(f"MQTT client init failed: {e}")
-    
+
     def _on_connect(self, client, userdata, flags, rc):
         if rc == 0:
             self.connected = True
@@ -261,113 +261,119 @@ class MQTTWorker:
         else:
             self.connected = False
             logger.error(f"MQTT connection failed, code {rc}")
-    
+
     def _on_disconnect(self, client, userdata, rc):
         self.connected = False
         logger.info("Disconnected from MQTT broker")
-    
+
     def _on_message(self, client, userdata, msg):
         """Handle MQTT messages"""
         try:
             topic = msg.topic
             payload = msg.payload.decode('utf-8')
-            
+
             logger.debug(f"Received from {topic}")
             self.db_manager.insert_raw_message(topic, payload)
-            
+
             # Handle RACK topics
             if topic.startswith('arjasari/rack/'):
                 data_type = topic.split('/')[-1]
                 self.db_manager.insert_rack_data(data_type, payload)
                 return
-            
+
             # Parse JSON
             try:
                 data = json.loads(payload)
             except json.JSONDecodeError:
                 logger.error(f"Invalid JSON from {topic}")
                 return
-            
+
             # Route sensor data
             if 'sensor/pzem016_ac' in topic:
-                measurement_point = 'inverter_to_load' if self.db_manager.has_measurement_point else None
-                self.db_manager.insert_pzem_data(data, measurement_point)
-                
+                mp = 'inverter_to_load' if self.db_manager.has_measurement_point else None
+                data["device_type"] = "PZEM-016_AC"
+                self.db_manager.insert_pzem_data(data, mp)
+
             elif 'sensor/pzem017_dc' in topic and 'batt' not in topic:
-                measurement_point = 'solar_to_scc' if self.db_manager.has_measurement_point else None
-                self.db_manager.insert_pzem_data(data, measurement_point)
-                
+                mp = 'solar_to_scc' if self.db_manager.has_measurement_point else None
+                data["device_type"] = "PZEM-017_DC"
+                self.db_manager.insert_pzem_data(data, mp)
+
             elif 'sensor/pzem017_dc_batt' in topic:
-                measurement_point = 'battery_to_inverter' if self.db_manager.has_measurement_point else None
-                self.db_manager.insert_pzem_data(data, measurement_point)
-                
+                mp = 'battery_to_inverter' if self.db_manager.has_measurement_point else None
+                data["device_type"] = "PZEM-017_DC"   # unify type, parser will branch by mp
+                self.db_manager.insert_pzem_data(data, mp)
+
             elif 'sensor/dht22' in topic:
                 self.db_manager.insert_dht22_data(data)
-                
+
             elif 'resource/system' in topic:
                 self.db_manager.insert_system_data(data)
-                
+
             elif 'all' in topic:
                 sensors = data.get('sensors', {})
-                
+
                 if 'pzem016_ac' in sensors and sensors['pzem016_ac']:
                     mp = 'inverter_to_load' if self.db_manager.has_measurement_point else None
+                    sensors['pzem016_ac']["device_type"] = "PZEM-016_AC"
                     self.db_manager.insert_pzem_data(sensors['pzem016_ac'], mp)
-                
+
                 if 'pzem017_dc' in sensors and sensors['pzem017_dc']:
                     mp = 'solar_to_scc' if self.db_manager.has_measurement_point else None
+                    sensors['pzem017_dc']["device_type"] = "PZEM-017_DC"
                     self.db_manager.insert_pzem_data(sensors['pzem017_dc'], mp)
-                
+
                 if 'pzem017_dc_batt' in sensors and sensors['pzem017_dc_batt']:
                     mp = 'battery_to_inverter' if self.db_manager.has_measurement_point else None
+                    sensors['pzem017_dc_batt']["device_type"] = "PZEM-017_DC"
                     self.db_manager.insert_pzem_data(sensors['pzem017_dc_batt'], mp)
-                
+
                 if 'dht22' in sensors and sensors['dht22']:
                     self.db_manager.insert_dht22_data(sensors['dht22'])
-                
+
                 if 'system' in sensors and sensors['system']:
                     self.db_manager.insert_system_data(sensors['system'])
-                
+
                 logger.info("Stored complete sensor data")
-            
+
         except Exception as e:
             logger.error(f"Message processing error: {e}")
-    
+
     def connect(self) -> bool:
         if not self.client:
             return False
-        
+
         try:
             logger.info(f"Connecting to {self.broker}:{self.port}")
             self.client.connect(self.broker, self.port, 60)
             self.client.loop_start()
-            
+
             timeout = time.time() + 10
             while not self.connected and time.time() < timeout:
                 time.sleep(0.1)
-            
+
             return self.connected
         except Exception as e:
             logger.error(f"Connection error: {e}")
             return False
-    
+
     def disconnect(self):
         if self.client:
             self.client.loop_stop()
             self.client.disconnect()
-    
+
     def start_monitoring(self):
         if not self.connect():
             logger.error("Failed to connect to MQTT broker")
             return
-        
+
         logger.info("MQTT Worker started")
-        
+
         if self.db_manager.has_measurement_point:
             logger.info("🔋 Battery monitoring enabled")
         else:
             logger.warning("⚠️ Battery monitoring requires database migration")
-        
+
         try:
             while True:
                 if not self.connected:
@@ -375,9 +381,9 @@ class MQTTWorker:
                     if not self.connect():
                         time.sleep(30)
                         continue
-                
+
                 time.sleep(60)
-                
+
         except KeyboardInterrupt:
             logger.info("MQTT Worker stopped")
         finally:
@@ -387,17 +393,17 @@ def main():
     print("=== Simple MQTT Worker ===")
     print(f"Broker: {MQTT_BROKER}:{MQTT_PORT}")
     print(f"Database: {DB_PATH}")
-    
+
     if not MQTT_AVAILABLE:
         print("❌ MQTT library not available")
         return
-    
+
     worker = MQTTWorker(MQTT_BROKER, MQTT_PORT)
-    
+
     try:
         worker.start_monitoring()
     except KeyboardInterrupt:
         logger.info("Program terminated")
 
 if __name__ == "__main__":
-    main()  
+    main()

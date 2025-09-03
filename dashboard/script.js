@@ -344,11 +344,20 @@ function updateDashboard(data) {
         updatePZEMCard('pzem016', null);
     }
 
-    // Update PZEM-017 DC  
+    // Update PZEM-017 DC Solar
     if (data.pzem_dc && data.pzem_dc.length > 0) {
         updatePZEMCard('pzem017', data.pzem_dc[0]);
     } else {
         updatePZEMCard('pzem017', null);
+    }
+
+    // ✅ Update PZEM-017 DC Battery
+    if (data.pzem_dc_batt && data.pzem_dc_batt.length > 0) {
+        updateBatteryCard(data.pzem_dc_batt[0]);
+        updateBatterySOC(data.pzem_dc_batt[0]);
+    } else {
+        updateBatteryCard(null);
+        updateBatterySOC(null);
     }
 
     // Update DHT22
@@ -375,6 +384,7 @@ function updateDashboard(data) {
     // Update Power Flow
     updatePowerFlowDiagram(data);
 }
+
 
 function updatePZEMCard(deviceId, data) {
     const statusEl = getEl(`${deviceId}Status`);
@@ -620,8 +630,8 @@ function updateBatteryCard(data) {
 
     if (!data) {
         statusEl.className = 'status-badge status-error';
-        statusEl.textContent = 'No Data';
-        dataEl.innerHTML = '<div class="error">No battery data available</div>';
+        statusEl.textContent = 'Data'; //this
+        dataEl.innerHTML = '<div class="error">battery data available</div>';
         return;
     }
 

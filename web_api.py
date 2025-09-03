@@ -132,7 +132,7 @@ class SensorDataAPI:
                 SELECT timestamp, device_type, raw_registers, register_count,
                        status, error_message, parsed_data, received_at, measurement_point
                 FROM pzem_data
-                WHERE device_type = 'PZEM-017_DC' AND measurement_point = 'battery_to_inverter'
+                WHERE device_type = 'PZEM-017' AND measurement_point = 'battery_to_inverter'
                 ORDER BY timestamp DESC LIMIT ?
             """,
                 (limit,),
