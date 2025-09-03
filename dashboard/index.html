@@ -12,7 +12,7 @@
     <div class="container">
         <div class="header">
             <h1><i class="fas fa-solar-panel"></i> Arjasari Solar Monitoring</h1>
-            <p>Professional real-time monitoring untuk PZEM-016 (AC), PZEM-017 (DC), DHT22, System Resources, dan RACK</p>
+            <p>Professional real-time monitoring untuk PZEM-016 (AC), PZEM-017 (DC Solar & Battery), DHT22, System Resources, dan RACK</p>
         </div>
 
         <div class="status-bar">
@@ -23,6 +23,10 @@
             <div class="status-item">
                 <div class="status-value" id="totalRecords">---</div>
                 <div class="status-label">Total Records</div>
+            </div>
+            <div class="status-item">
+                <div class="status-value" id="batterySOC">--%</div>
+                <div class="status-label">Battery SOC</div>
             </div>
         </div>
 
@@ -68,7 +72,7 @@
             </div>
 
             <!-- PZEM-016 AC Card -->
-            <div class="card col-span-6">
+            <div class="card col-span-4">
                 <div class="card-header">
                     <h3 class="card-title">
                         <div class="card-icon icon-power">
@@ -83,19 +87,38 @@
                 </div>
             </div>
 
-            <!-- PZEM-017 DC Card -->
-            <div class="card col-span-6">
+            <!-- PZEM-017 DC Solar Card -->
+            <div class="card col-span-4">
                 <div class="card-header">
                     <h3 class="card-title">
                         <div class="card-icon icon-solar">
                             <i class="fas fa-sun"></i>
                         </div>
-                        PZEM-017 (DC Power)
+                        PZEM-017 (DC Solar)
                     </h3>
                     <span class="status-badge" id="pzem017Status">Loading...</span>
                 </div>
                 <div id="pzem017Data">
                     <div class="loading">Loading PZEM-017 data...</div>
+                </div>
+            </div>
+
+            <!-- PZEM-017 DC Battery Card - REPLACED System Analysis -->
+            <div class="card col-span-4">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <div class="card-icon icon-battery">
+                            <i class="fas fa-battery-half"></i>
+                        </div>
+                        PZEM-017 (Battery)
+                    </h3>
+                    <span class="status-badge" id="pzem017BattStatus">Loading...</span>
+                </div>
+                <div id="pzem017BattData">
+                    <div class="loading">Loading Battery data...</div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="batteryChart"></canvas>
                 </div>
             </div>
 
@@ -134,22 +157,6 @@
                 </div>
                 <div class="chart-container">
                     <canvas id="dht22Chart"></canvas>
-                </div>
-            </div>
-
-            <!-- Analysis Card -->
-            <div class="card col-span-12">
-                <div class="card-header">
-                    <h3 class="card-title">
-                        <div class="card-icon icon-analysis">
-                            <i class="fas fa-chart-line"></i>
-                        </div>
-                        System Analysis
-                    </h3>
-                    <span class="status-badge" id="analysisStatus">Loading...</span>
-                </div>
-                <div id="analysisData">
-                    <div class="loading">Loading analysis data...</div>
                 </div>
             </div>
 

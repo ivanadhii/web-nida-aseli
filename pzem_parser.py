@@ -19,6 +19,10 @@ PZEM-017 DC (Solar ke SCC):
 - Index 4-5: Energy (Wh) 32-bit × 1
 - Index 6: Over-voltage alarm
 - Index 7: Under-voltage alarm
+
+PZEM-017 DC Battery (Baterai ke Inverter):
+- Same registry format as solar PZEM-017 DC
+- Different interpretation untuk battery status
 """
 
 import json
@@ -41,94 +45,6 @@ class PZEMParser:
         """
         Parse PZEM-016 AC data (Inverter ke Load AC)
         Raw example: [2204, 52, 0, 69, 0, 3763, 0, 500, 60, 0]
-        """
-        if not raw_registers or len(raw_registers) < 6:
-            return {
-                'error': 'Insufficient data',
-                'raw_registers': raw_registers,
-                'register_count': len(raw_registers) if raw_registers else 0,
-                'status': 'error'
-            }
-        
-        try:
-            result = {
-                'device_type': 'PZEM-016_AC',
-                'measurement_point': 'Inverter to Load AC',
-                'raw_registers': raw_registers,
-                'register_count': len(raw_registers)
-            }
-            
-            # Index 0: Voltage (V) ÷ 10
-            voltage = raw_registers[0] / 10.0
-            result['voltage_v'] = round(voltage, 1)
-            
-            # Index 1-2: Current (A) 32-bit ÷ 1000
-            if len(raw_registers) >= 3:
-                current_32bit = PZEMParser.combine_32bit(raw_registers[1], raw_registers[2])
-                current = current_32bit / 1000.0
-            else:
-                current = raw_registers[1] / 1000.0
-            result['current_a'] = round(current, 3)
-            
-            # Index 3-4: Power (W) 32-bit ÷ 10
-            if len(raw_registers) >= 5:
-                power_32bit = PZEMParser.combine_32bit(raw_registers[3], raw_registers[4])
-                power = power_32bit / 10.0
-            else:
-                power = raw_registers[3] / 10.0 if len(raw_registers) > 3 else 0
-            result['power_w'] = round(power, 1)
-            
-            # Index 5-6: Energy (Wh) 32-bit direct
-            if len(raw_registers) >= 7:
-                energy_32bit = PZEMParser.combine_32bit(raw_registers[5], raw_registers[6])
-                energy_wh = energy_32bit
-            else:
-                energy_wh = raw_registers[5] if len(raw_registers) > 5 else 0
-            result['energy_wh'] = energy_wh
-            result['energy_kwh'] = round(energy_wh / 1000.0, 3)
-            
-            # Index 7: Frequency (Hz) ÷ 10
-            if len(raw_registers) > 7:
-                frequency = raw_registers[7] / 10.0
-                result['frequency_hz'] = round(frequency, 1)
-            
-            # Index 8: Power Factor ÷ 100
-            if len(raw_registers) > 8:
-                power_factor = raw_registers[8] / 100.0
-                result['power_factor'] = round(power_factor, 2)
-            
-            # Index 9: Alarm status
-            if len(raw_registers) > 9:
-                alarm_raw = raw_registers[9]
-                result['alarm_status'] = 'ON' if alarm_raw != 0 else 'OFF'
-                result['alarm_raw'] = alarm_raw
-            
-            # Calculated values
-            result['apparent_power_va'] = round(voltage * current, 1)
-            if len(raw_registers) > 8 and result['power_factor'] > 0:
-                result['reactive_power_var'] = round(
-                    result['apparent_power_va'] * (1 - result['power_factor']**2)**0.5, 1
-                )
-            
-            result['status'] = 'success'
-            result['parsed_at'] = datetime.now().isoformat()
-            
-            return result
-            
-        except Exception as e:
-            logger.error(f"Error parsing PZEM-016 data: {e}")
-            return {
-                'error': f'Parse error: {str(e)}',
-                'raw_registers': raw_registers,
-                'device_type': 'PZEM-016_AC',
-                'status': 'error'
-            }
-    
-    @staticmethod
-    def parse_pzem017_dc(raw_registers: List[int]) -> Dict[str, Any]:
-        """
-        Parse PZEM-017 DC data (Solar ke SCC)
-        Raw example: [9, 0, 0, 0, 5606, 0, 0, 65535]
         """
         if not raw_registers or len(raw_registers) < 6:
             return {
@@ -206,6 +122,118 @@ class PZEMParser:
                 'error': f'Parse error: {str(e)}',
                 'raw_registers': raw_registers,
                 'device_type': 'PZEM-017_DC',
+                'status': 'error'
+            }
+    
+    @staticmethod
+    def parse_pzem017_dc_battery(raw_registers: List[int]) -> Dict[str, Any]:
+        """
+        Parse PZEM-017 DC data (Battery ke Inverter)
+        Same registry format as solar PZEM-017 DC but different interpretation
+        Raw example: [1230, 45, 0, 55, 8200, 0, 0, 0]
+        """
+        if not raw_registers or len(raw_registers) < 6:
+            return {
+                'error': 'Insufficient data',
+                'raw_registers': raw_registers,
+                'register_count': len(raw_registers) if raw_registers else 0,
+                'status': 'error'
+            }
+        
+        try:
+            result = {
+                'device_type': 'PZEM-017_DC',
+                'measurement_point': 'Battery to Inverter',
+                'raw_registers': raw_registers,
+                'register_count': len(raw_registers)
+            }
+            
+            # Index 0: Voltage (V) × 0.01
+            voltage = raw_registers[0] * 0.01
+            result['voltage_v'] = round(voltage, 2)
+            
+            # Index 1: Current (A) × 0.01
+            current = raw_registers[1] * 0.01
+            result['current_a'] = round(current, 3)
+            
+            # Index 2-3: Power (W) 32-bit × 0.1
+            if len(raw_registers) >= 4:
+                power_32bit = PZEMParser.combine_32bit(raw_registers[2], raw_registers[3])
+                power = power_32bit * 0.1
+            else:
+                power = raw_registers[2] * 0.1 if len(raw_registers) > 2 else 0
+            result['power_w'] = round(power, 1)
+            
+            # Index 4-5: Energy (Wh) 32-bit × 1
+            if len(raw_registers) >= 6:
+                energy_32bit = PZEMParser.combine_32bit(raw_registers[4], raw_registers[5])
+                energy_wh = energy_32bit
+            else:
+                energy_wh = raw_registers[4] if len(raw_registers) > 4 else 0
+            result['energy_wh'] = energy_wh
+            result['energy_kwh'] = round(energy_wh / 1000.0, 3)
+            
+            # Index 6: Over-voltage alarm
+            if len(raw_registers) > 6:
+                ov_alarm_raw = raw_registers[6]
+                result['over_voltage_alarm'] = 'ON' if ov_alarm_raw != 0 else 'OFF'
+                result['over_voltage_alarm_raw'] = ov_alarm_raw
+            
+            # Index 7: Under-voltage alarm  
+            if len(raw_registers) > 7:
+                uv_alarm_raw = raw_registers[7]
+                result['under_voltage_alarm'] = 'ON' if uv_alarm_raw == 65535 else 'OFF'
+                result['under_voltage_alarm_raw'] = uv_alarm_raw
+            
+            # Battery status assessment berdasarkan voltage
+            if voltage < 10.5:
+                result['battery_status'] = 'Critical low - Deep discharge'
+                result['soc_estimate'] = 0  # State of Charge
+            elif voltage < 11.5:
+                result['battery_status'] = 'Very low - Need charging'
+                result['soc_estimate'] = 10
+            elif voltage < 12.0:
+                result['battery_status'] = 'Low - Discharging'
+                result['soc_estimate'] = 25
+            elif voltage < 12.6:
+                result['battery_status'] = 'Medium - Normal use'
+                result['soc_estimate'] = 50
+            elif voltage < 13.0:
+                result['battery_status'] = 'Good - Well charged'
+                result['soc_estimate'] = 80
+            else:
+                result['battery_status'] = 'Full - Fully charged'
+                result['soc_estimate'] = 100
+            
+            # Power flow assessment (positive = discharging, negative = charging)
+            if power > 10:
+                result['flow_direction'] = 'Discharging to load'
+                result['flow_status'] = 'Active discharge'
+            elif power > 1:
+                result['flow_direction'] = 'Light discharge'
+                result['flow_status'] = 'Standby discharge'
+            elif power < -10:
+                result['flow_direction'] = 'Charging from solar'
+                result['flow_status'] = 'Active charging'
+            elif power < -1:
+                result['flow_direction'] = 'Trickle charging'
+                result['flow_status'] = 'Maintenance charging'
+            else:
+                result['flow_direction'] = 'No significant flow'
+                result['flow_status'] = 'Idle'
+            
+            result['status'] = 'success'
+            result['parsed_at'] = datetime.now().isoformat()
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error parsing PZEM-017 battery data: {e}")
+            return {
+                'error': f'Parse error: {str(e)}',
+                'raw_registers': raw_registers,
+                'device_type': 'PZEM-017_DC',
+                'measurement_point': 'Battery to Inverter',
                 'status': 'error'
             }
 
@@ -324,29 +352,97 @@ class EnhancedPZEMAnalyzer:
         return analysis
     
     @staticmethod
-    def calculate_system_efficiency(ac_data: Dict[str, Any], dc_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Calculate overall system efficiency"""
+    def analyze_battery_status(battery_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Analyze battery status dan flow"""
+        if battery_data.get('status') != 'success':
+            return {'analysis': 'No valid battery data'}
+        
+        voltage = battery_data.get('voltage_v', 0)
+        current = battery_data.get('current_a', 0)
+        power = battery_data.get('power_w', 0)
+        soc = battery_data.get('soc_estimate', 0)
+        
+        analysis = {
+            'health_status': 'Unknown',
+            'charge_status': 'Unknown',
+            'flow_analysis': 'Unknown',
+            'alerts': [],
+            'insights': []
+        }
+        
+        # Health analysis berdasarkan voltage patterns
+        if voltage < 10.5:
+            analysis['health_status'] = 'Critical - Risk of damage'
+            analysis['alerts'].append('🚨 Battery critically low - immediate action required')
+        elif voltage < 11.5:
+            analysis['health_status'] = 'Poor - Needs attention'
+            analysis['alerts'].append('⚠️ Battery voltage very low')
+        elif voltage > 14.5:
+            analysis['health_status'] = 'Overcharge risk'
+            analysis['alerts'].append('⚠️ Battery voltage too high - check charging')
+        else:
+            analysis['health_status'] = 'Normal'
+        
+        # Charge status
+        if soc < 20:
+            analysis['charge_status'] = 'Critical low'
+        elif soc < 50:
+            analysis['charge_status'] = 'Low'
+        elif soc < 80:
+            analysis['charge_status'] = 'Medium'
+        else:
+            analysis['charge_status'] = 'Good'
+        
+        # Flow analysis
+        if power > 50:
+            analysis['flow_analysis'] = 'Heavy discharge'
+            analysis['insights'].append('🔋 High power draw from battery')
+        elif power > 10:
+            analysis['flow_analysis'] = 'Normal discharge'
+        elif power < -10:
+            analysis['flow_analysis'] = 'Charging'
+            analysis['insights'].append('⚡ Battery being charged')
+        else:
+            analysis['flow_analysis'] = 'Standby'
+        
+        # Performance insights
+        if current > 10:
+            analysis['insights'].append('⚠️ High current draw - monitor battery temperature')
+        
+        return analysis
+    
+    @staticmethod
+    def calculate_system_efficiency(ac_data: Dict[str, Any], dc_solar_data: Dict[str, Any], dc_battery_data: Dict[str, Any] = None) -> Dict[str, Any]:
+        """Calculate overall system efficiency with battery consideration"""
         if (ac_data.get('status') != 'success' or 
-            dc_data.get('status') != 'success'):
+            dc_solar_data.get('status') != 'success'):
             return {'efficiency': 'Cannot calculate - insufficient data'}
         
-        dc_power = dc_data.get('power_w', 0)
+        solar_power = dc_solar_data.get('power_w', 0)
+        battery_power = dc_battery_data.get('power_w', 0) if dc_battery_data and dc_battery_data.get('status') == 'success' else 0
         ac_power = ac_data.get('power_w', 0)
         
-        if dc_power <= 0:
+        # Total input power (solar + battery if discharging)
+        total_input = solar_power
+        if battery_power > 0:  # Battery discharging
+            total_input += battery_power
+        
+        if total_input <= 0:
             return {
                 'system_efficiency_percent': 0,
-                'status': 'No DC input power',
-                'note': 'System not generating'
+                'status': 'No input power',
+                'note': 'System not generating or discharging'
             }
         
-        efficiency = (ac_power / dc_power) * 100
+        efficiency = (ac_power / total_input) * 100
         
         result = {
             'system_efficiency_percent': round(efficiency, 1),
-            'dc_input_w': dc_power,
+            'solar_input_w': solar_power,
+            'battery_input_w': battery_power if battery_power > 0 else 0,
+            'total_dc_input_w': total_input,
             'ac_output_w': ac_power,
-            'power_loss_w': round(dc_power - ac_power, 1)
+            'power_loss_w': round(total_input - ac_power, 1)
         }
         
         if efficiency > 90:
@@ -359,12 +455,19 @@ class EnhancedPZEMAnalyzer:
             result['efficiency_status'] = 'Poor'
             result['recommendation'] = 'Check system components for issues'
         
+        # Battery flow status
+        if battery_power > 0:
+            result['battery_contribution'] = round((battery_power / total_input) * 100, 1)
+        elif battery_power < 0:
+            result['battery_charging'] = True
+            result['charging_power_w'] = abs(battery_power)
+        
         return result
 
 # Test functions
 def test_parser():
     """Test parser dengan data contoh"""
-    print("=== Testing PZEM Parser ===")
+    print("=== Testing PZEM Parser with Battery Support ===")
     
     # Test PZEM-016 AC data
     print("\n1. Testing PZEM-016 AC (Inverter to Load):")
@@ -372,21 +475,118 @@ def test_parser():
     ac_parsed = PZEMParser.parse_pzem016_ac(ac_raw)
     print(json.dumps(ac_parsed, indent=2))
     
-    # Test PZEM-017 DC data
+    # Test PZEM-017 DC Solar data
     print("\n2. Testing PZEM-017 DC (Solar to SCC):")
-    dc_raw = [9, 0, 0, 0, 5606, 0, 0, 65535]
-    dc_parsed = PZEMParser.parse_pzem017_dc(dc_raw)
-    print(json.dumps(dc_parsed, indent=2))
+    dc_solar_raw = [9, 0, 0, 0, 5606, 0, 0, 65535]
+    dc_solar_parsed = PZEMParser.parse_pzem017_dc(dc_solar_raw)
+    print(json.dumps(dc_solar_parsed, indent=2))
     
-    # Test analysis
-    print("\n3. Testing Enhanced Analysis:")
+    # Test PZEM-017 DC Battery data
+    print("\n3. Testing PZEM-017 DC Battery (Battery to Inverter):")
+    dc_battery_raw = [1230, 45, 0, 55, 8200, 0, 0, 0]  # 12.30V, 0.45A, 5.5W
+    dc_battery_parsed = PZEMParser.parse_pzem017_dc_battery(dc_battery_raw)
+    print(json.dumps(dc_battery_parsed, indent=2))
+    
+    # Test enhanced analysis
+    print("\n4. Testing Enhanced Analysis:")
     ac_analysis = EnhancedPZEMAnalyzer.analyze_ac_power_flow(ac_parsed)
-    dc_analysis = EnhancedPZEMAnalyzer.analyze_solar_generation(dc_parsed)
-    system_efficiency = EnhancedPZEMAnalyzer.calculate_system_efficiency(ac_parsed, dc_parsed)
+    dc_solar_analysis = EnhancedPZEMAnalyzer.analyze_solar_generation(dc_solar_parsed)
+    battery_analysis = EnhancedPZEMAnalyzer.analyze_battery_status(dc_battery_parsed)
+    system_efficiency = EnhancedPZEMAnalyzer.calculate_system_efficiency(ac_parsed, dc_solar_parsed, dc_battery_parsed)
     
     print("\nAC Analysis:", json.dumps(ac_analysis, indent=2))
-    print("\nDC Analysis:", json.dumps(dc_analysis, indent=2))
+    print("\nDC Solar Analysis:", json.dumps(dc_solar_analysis, indent=2))
+    print("\nBattery Analysis:", json.dumps(battery_analysis, indent=2))
     print("\nSystem Efficiency:", json.dumps(system_efficiency, indent=2))
 
 if __name__ == "__main__":
     test_parser()
+                'device_type': 'PZEM-016_AC',
+                'measurement_point': 'Inverter to Load AC',
+                'raw_registers': raw_registers,
+                'register_count': len(raw_registers)
+            }
+            
+            # Index 0: Voltage (V) ÷ 10
+            voltage = raw_registers[0] / 10.0
+            result['voltage_v'] = round(voltage, 1)
+            
+            # Index 1-2: Current (A) 32-bit ÷ 1000
+            if len(raw_registers) >= 3:
+                current_32bit = PZEMParser.combine_32bit(raw_registers[1], raw_registers[2])
+                current = current_32bit / 1000.0
+            else:
+                current = raw_registers[1] / 1000.0
+            result['current_a'] = round(current, 3)
+            
+            # Index 3-4: Power (W) 32-bit ÷ 10
+            if len(raw_registers) >= 5:
+                power_32bit = PZEMParser.combine_32bit(raw_registers[3], raw_registers[4])
+                power = power_32bit / 10.0
+            else:
+                power = raw_registers[3] / 10.0 if len(raw_registers) > 3 else 0
+            result['power_w'] = round(power, 1)
+            
+            # Index 5-6: Energy (Wh) 32-bit direct
+            if len(raw_registers) >= 7:
+                energy_32bit = PZEMParser.combine_32bit(raw_registers[5], raw_registers[6])
+                energy_wh = energy_32bit
+            else:
+                energy_wh = raw_registers[5] if len(raw_registers) > 5 else 0
+            result['energy_wh'] = energy_wh
+            result['energy_kwh'] = round(energy_wh / 1000.0, 3)
+            
+            # Index 7: Frequency (Hz) ÷ 10
+            if len(raw_registers) > 7:
+                frequency = raw_registers[7] / 10.0
+                result['frequency_hz'] = round(frequency, 1)
+            
+            # Index 8: Power Factor ÷ 100
+            if len(raw_registers) > 8:
+                power_factor = raw_registers[8] / 100.0
+                result['power_factor'] = round(power_factor, 2)
+            
+            # Index 9: Alarm status
+            if len(raw_registers) > 9:
+                alarm_raw = raw_registers[9]
+                result['alarm_status'] = 'ON' if alarm_raw != 0 else 'OFF'
+                result['alarm_raw'] = alarm_raw
+            
+            # Calculated values
+            result['apparent_power_va'] = round(voltage * current, 1)
+            if len(raw_registers) > 8 and result['power_factor'] > 0:
+                result['reactive_power_var'] = round(
+                    result['apparent_power_va'] * (1 - result['power_factor']**2)**0.5, 1
+                )
+            
+            result['status'] = 'success'
+            result['parsed_at'] = datetime.now().isoformat()
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error parsing PZEM-016 data: {e}")
+            return {
+                'error': f'Parse error: {str(e)}',
+                'raw_registers': raw_registers,
+                'device_type': 'PZEM-016_AC',
+                'status': 'error'
+            }
+    
+    @staticmethod
+    def parse_pzem017_dc(raw_registers: List[int]) -> Dict[str, Any]:
+        """
+        Parse PZEM-017 DC data (Solar ke SCC)
+        Raw example: [9, 0, 0, 0, 5606, 0, 0, 65535]
+        """
+        if not raw_registers or len(raw_registers) < 6:
+            return {
+                'error': 'Insufficient data',
+                'raw_registers': raw_registers,
+                'register_count': len(raw_registers) if raw_registers else 0,
+                'status': 'error'
+            }
+        
+        try:
+            result = {
+                '

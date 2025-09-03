@@ -584,3 +584,266 @@ body {
     .sensor-reading { flex-direction: column; gap: 8px; text-align: center; }
     .reading-value { font-size: 1.8rem; }
 }
+
+/* Add to existing style.css - Battery specific styles */
+
+/* Battery icon gradient */
+.icon-battery { 
+    background: linear-gradient(135deg, #16a34a, #15803d); 
+    color: white; 
+}
+
+/* Battery SOC status colors */
+.soc-critical { 
+    background: linear-gradient(135deg, #fecaca, #fca5a5) !important;
+}
+.soc-critical .status-value { 
+    color: #991b1b !important; 
+}
+
+.soc-low { 
+    background: linear-gradient(135deg, #fef3c7, #fde68a) !important;
+}
+.soc-low .status-value { 
+    color: #92400e !important; 
+}
+
+.soc-medium { 
+    background: linear-gradient(135deg, #dbeafe, #bfdbfe) !important;
+}
+.soc-medium .status-value { 
+    color: #1e40af !important; 
+}
+
+.soc-high { 
+    background: linear-gradient(135deg, #dcfce7, #bbf7d0) !important;
+}
+.soc-high .status-value { 
+    color: #166534 !important; 
+}
+
+/* Battery reading value colors */
+.reading-value.soc-critical {
+    color: var(--error-color) !important;
+}
+
+.reading-value.soc-low {
+    color: var(--warning-color) !important;
+}
+
+.reading-value.soc-medium {
+    color: var(--info-color) !important;
+}
+
+.reading-value.soc-high {
+    color: var(--success-color) !important;
+}
+
+/* Battery status indicators */
+.battery-status {
+    font-size: 0.9rem !important;
+    font-weight: 600;
+    text-transform: capitalize;
+}
+
+.flow-direction {
+    font-size: 0.9rem !important;
+    font-weight: 600;
+    color: var(--info-color);
+}
+
+/* Power flow battery status */
+.battery-flow {
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 12px;
+    margin-top: 4px;
+    text-align: center;
+}
+
+.battery-flow.charging {
+    background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+    color: #166534;
+    border: 1px solid #86efac;
+}
+
+.battery-flow.discharging {
+    background: linear-gradient(135deg, #fef3c7, #fde68a);
+    color: #92400e;
+    border: 1px solid #fbbf24;
+}
+
+.battery-flow.idle {
+    background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
+    color: #6b7280;
+    border: 1px solid #d1d5db;
+}
+
+/* Enhanced power node for battery display */
+.power-node-detail.battery-flow {
+    margin-top: 8px;
+    font-size: 0.75rem;
+    padding: 6px 10px;
+    border-radius: 16px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Battery level indicator in cards */
+.battery-level-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 12px 0;
+}
+
+.battery-level-bar {
+    flex: 1;
+    height: 12px;
+    background: #f3f4f6;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid #e5e7eb;
+}
+
+.battery-level-fill {
+    height: 100%;
+    transition: width 0.3s ease, background-color 0.3s ease;
+    border-radius: 6px;
+}
+
+.battery-level-fill.critical {
+    background: linear-gradient(90deg, #ef4444, #dc2626);
+}
+
+.battery-level-fill.low {
+    background: linear-gradient(90deg, #f59e0b, #d97706);
+}
+
+.battery-level-fill.medium {
+    background: linear-gradient(90deg, #06b6d4, #0891b2);
+}
+
+.battery-level-fill.high {
+    background: linear-gradient(90deg, #10b981, #059669);
+}
+
+/* Status item battery SOC enhancements */
+.status-item.soc-critical:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 8px 25px rgba(239, 68, 68, 0.15);
+}
+
+.status-item.soc-low:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 8px 25px rgba(245, 158, 11, 0.15);
+}
+
+.status-item.soc-medium:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 8px 25px rgba(6, 182, 212, 0.15);
+}
+
+.status-item.soc-high:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 8px 25px rgba(16, 185, 129, 0.15);
+}
+
+/* Battery card specific styling */
+.card .battery-info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin: 16px 0;
+}
+
+.battery-info-item {
+    text-align: center;
+    padding: 12px;
+    background: var(--surface-color);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.battery-info-label {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+
+.battery-info-value {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+/* Animation for battery charging/discharging */
+@keyframes battery-pulse {
+    0% { opacity: 0.7; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.05); }
+    100% { opacity: 0.7; transform: scale(1); }
+}
+
+.battery-flow.charging {
+    animation: battery-pulse 2s ease-in-out infinite;
+}
+
+.battery-flow.discharging {
+    animation: battery-pulse 1.5s ease-in-out infinite;
+}
+
+/* Battery voltage warning colors */
+.voltage-critical {
+    color: var(--error-color) !important;
+    font-weight: 700;
+    animation: blink 1s linear infinite;
+}
+
+.voltage-low {
+    color: var(--warning-color) !important;
+    font-weight: 700;
+}
+
+.voltage-normal {
+    color: var(--success-color) !important;
+}
+
+@keyframes blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0.5; }
+}
+
+/* Enhanced responsive design for battery */
+@media (max-width: 768px) {
+    .battery-info-grid {
+        grid-template-columns: 1fr !important;
+    }
+    
+    .battery-flow {
+        font-size: 0.7rem !important;
+        padding: 3px 6px !important;
+    }
+    
+    .power-node-detail.battery-flow {
+        font-size: 0.65rem !important;
+        padding: 4px 6px !important;
+    }
+}
+
+/* Dark mode battery colors (if implemented later) */
+@media (prefers-color-scheme: dark) {
+    .battery-level-bar {
+        background: #374151;
+        border-color: #4b5563;
+    }
+    
+    .battery-info-item {
+        background: #374151;
+        border-color: #4b5563;
+    }
+}

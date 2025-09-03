@@ -1,10 +1,25 @@
-// Configuration for Docker setup
+// // Update PZEM-017 DC Solar
+//     if (data.pzem_dc && data.pzem_dc.length > 0) {
+//         updatePZEMCard('pzem017', data.pzem_dc[0]);
+//     } else {
+//         updatePZEMCard('pzem017', null);
+//     }
+
+//     // Update PZEM-017 DC Battery - NEW
+//     if (data.pzem_dc_batt && data.pzem_dc_batt.length > 0) {
+//         updateBatteryCard(data.pzem_dc_batt[0]);
+//         updateBatterySOC(data.pzem_dc_batt[0]);
+//     } else {
+//         updateBatteryCard(null);
+//         updateBatterySOC(null);
+//     }// Configuration for Docker setup
 const API_BASE = 'http://localhost:5000/api';
 let autoRefreshEnabled = true;
 let refreshTimer = null;
 let dht22Chart = null;
 let systemChart = null;
 let rackChart = null;
+let batteryChart = null;  // NEW: Battery chart
 
 // --- Helper Functions ---
 function getEl(id) {
@@ -202,6 +217,64 @@ function initCharts() {
         });
     }
 
+    // Battery Chart - NEW
+    const batteryCtx = getEl('batteryChart');
+    if (batteryCtx) {
+        batteryChart = new Chart(batteryCtx.getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Battery Voltage (V)',
+                    data: [],
+                    borderColor: '#16a34a',
+                    backgroundColor: 'rgba(22, 163, 74, 0.1)',
+                    fill: true,
+                    yAxisID: 'y'
+                }, {
+                    label: 'Battery Power (W)',
+                    data: [],
+                    borderColor: '#dc2626',
+                    backgroundColor: 'rgba(220, 38, 38, 0.1)',
+                    fill: true,
+                    yAxisID: 'y1'
+                }, {
+                    label: 'SOC (%)',
+                    data: [],
+                    borderColor: '#7c3aed',
+                    backgroundColor: 'rgba(124, 58, 237, 0.1)',
+                    fill: true,
+                    yAxisID: 'y2'
+                }]
+            },
+            options: {
+                ...baseOptions,
+                scales: {
+                    ...baseOptions.scales,
+                    y: {
+                        ...baseOptions.scales.y,
+                        position: 'left',
+                        title: { display: true, text: 'Voltage (V)', color: '#16a34a' },
+                        min: 10,
+                        max: 15
+                    },
+                    y1: {
+                        ...baseOptions.scales.y,
+                        position: 'right',
+                        title: { display: true, text: 'Power (W)', color: '#dc2626' },
+                        grid: { drawOnChartArea: false }
+                    },
+                    y2: {
+                        ...baseOptions.scales.y,
+                        display: false,
+                        min: 0,
+                        max: 100
+                    }
+                }
+            }
+        });
+    }
+
     console.log('Charts initialized successfully');
 }
 
@@ -223,7 +296,7 @@ async function fetchJson(url) {
         throw error;
     }
 }
-
+    
 // --- Main Data Refresh ---
 async function refreshData() {
     console.log('Starting data refresh...');
@@ -539,23 +612,123 @@ function updateRackCard(data) {
     `;
 }
 
+function updateBatteryCard(data) {
+    const statusEl = getEl('pzem017BattStatus');
+    const dataEl = getEl('pzem017BattData');
+
+    if (!statusEl || !dataEl) return;
+
+    if (!data) {
+        statusEl.className = 'status-badge status-error';
+        statusEl.textContent = 'No Data';
+        dataEl.innerHTML = '<div class="error">No battery data available</div>';
+        return;
+    }
+
+    statusEl.className = `status-badge status-${data.status === 'success' ? 'success' : 'error'}`;
+    statusEl.textContent = data.status === 'success' ? 'Online' : 'Error';
+
+    if (data.status === 'success' && data.parsed_data?.status === 'success') {
+        const parsed = data.parsed_data;
+        const soc = parsed.soc_estimate || 0;
+        const batteryStatus = parsed.battery_status || 'Unknown';
+        const flowDirection = parsed.flow_direction || 'Unknown';
+        
+        // Battery SOC indicator with color coding
+        let socClass = 'high';
+        if (soc < 20) socClass = 'critical';
+        else if (soc < 50) socClass = 'low';
+        else if (soc < 80) socClass = 'medium';
+
+        dataEl.innerHTML = `
+            <div class="sensor-reading">
+                <span class="reading-label"><i class="fas fa-battery-half"></i> Battery Voltage</span>
+                <span class="reading-value">${parsed.voltage_v || 0} <span class="reading-unit">V</span></span>
+            </div>
+            <div class="sensor-reading">
+                <span class="reading-label"><i class="fas fa-bolt"></i> Battery Current</span>
+                <span class="reading-value">${parsed.current_a || 0} <span class="reading-unit">A</span></span>
+            </div>
+            <div class="sensor-reading">
+                <span class="reading-label"><i class="fas fa-flash"></i> Battery Power</span>
+                <span class="reading-value">${parsed.power_w || 0} <span class="reading-unit">W</span></span>
+            </div>
+            <div class="sensor-reading">
+                <span class="reading-label"><i class="fas fa-percentage"></i> State of Charge</span>
+                <span class="reading-value soc-${socClass}">${soc}<span class="reading-unit">%</span></span>
+            </div>
+            <div class="sensor-reading">
+                <span class="reading-label"><i class="fas fa-info-circle"></i> Status</span>
+                <span class="reading-value battery-status">${batteryStatus}</span>
+            </div>
+            <div class="sensor-reading">
+                <span class="reading-label"><i class="fas fa-arrow-right"></i> Flow Direction</span>
+                <span class="reading-value flow-direction">${flowDirection}</span>
+            </div>
+            <div class="timestamp">
+                <i class="fas fa-clock"></i> ${formatDateTime(data.timestamp)}
+            </div>
+        `;
+    } else {
+        dataEl.innerHTML = `
+            <div class="error">
+                <i class="fas fa-exclamation-circle"></i>
+                <strong>Error:</strong> ${data.error_message || 'Failed to read battery sensor'}
+            </div>
+            <div class="timestamp">
+                <i class="fas fa-clock"></i> ${formatDateTime(data.timestamp)}
+            </div>
+        `;
+    }
+}
+
+function updateBatterySOC(data) {
+    const socEl = getEl('batterySOC');
+    if (!socEl) return;
+
+    if (data && data.status === 'success' && data.parsed_data?.status === 'success') {
+        const soc = data.parsed_data.soc_estimate || 0;
+        socEl.textContent = `${soc}%`;
+        
+        // Update color based on SOC level
+        const statusBar = socEl.closest('.status-item');
+        if (statusBar) {
+            statusBar.className = 'status-item';
+            if (soc < 20) statusBar.classList.add('soc-critical');
+            else if (soc < 50) statusBar.classList.add('soc-low');
+            else if (soc < 80) statusBar.classList.add('soc-medium');
+            else statusBar.classList.add('soc-high');
+        }
+    } else {
+        socEl.textContent = '--%';
+    }
+}
+
 function updatePowerFlowDiagram(data) {
     const statusEl = getEl('powerFlowStatus');
     const diagramEl = getEl('powerFlowDiagram');
 
     if (!statusEl || !diagramEl) return;
 
-    // Extract power values
+    // Extract power values including battery
     const solarPower = data.pzem_dc?.[0]?.parsed_data?.power_w || 0;
+    const batteryPower = data.pzem_dc_batt?.[0]?.parsed_data?.power_w || 0;
     const acPower = data.pzem_ac?.[0]?.parsed_data?.power_w || 0;
     const solarVoltage = data.pzem_dc?.[0]?.parsed_data?.voltage_v || 0;
+    const batteryVoltage = data.pzem_dc_batt?.[0]?.parsed_data?.voltage_v || 0;
+    const batterySOC = data.pzem_dc_batt?.[0]?.parsed_data?.soc_estimate || 0;
     const acVoltage = data.pzem_ac?.[0]?.parsed_data?.voltage_v || 0;
 
     statusEl.className = 'status-badge status-success';
     statusEl.textContent = 'Active';
 
     const solarActive = solarPower > 1;
+    const batteryActive = Math.abs(batteryPower) > 1;
     const acActive = acPower > 1;
+
+    // Determine battery flow direction
+    const batteryCharging = batteryPower < 0;
+    const batteryDischarging = batteryPower > 0;
 
     diagramEl.innerHTML = `
         <div class="power-flow-container">
@@ -572,8 +745,13 @@ function updatePowerFlowDiagram(data) {
             
             <div class="power-node">
                 <div class="power-node-icon">🔋</div>
-                <div class="power-node-label">SCC</div>
-                <div class="power-node-value">Charge Controller</div>
+                <div class="power-node-label">SCC + Battery</div>
+                <div class="power-node-value">${batteryVoltage.toFixed(1)}V</div>
+                <div class="power-node-detail">SOC: ${batterySOC}%</div>
+                <div class="power-node-detail battery-flow ${batteryCharging ? 'charging' : batteryDischarging ? 'discharging' : 'idle'}">
+                    ${batteryCharging ? '⬇️ Charging' : batteryDischarging ? '⬆️ Discharging' : '⏸️ Standby'}
+                    (${Math.abs(batteryPower).toFixed(1)}W)
+                </div>
             </div>
             
             <div class="power-arrow ${acActive ? '' : 'inactive'}">
@@ -599,10 +777,16 @@ function updatePowerFlowDiagram(data) {
         </div>
         
         <div class="efficiency-display">
-            <div class="efficiency-value">${solarPower > 0 ? Math.round((acPower / solarPower) * 100) : 0}%</div>
+            <div class="efficiency-value">${calculateSystemEfficiency(solarPower, batteryPower, acPower)}%</div>
             <div class="efficiency-label">System Efficiency</div>
         </div>
     `;
+}
+
+function calculateSystemEfficiency(solarPower, batteryPower, acPower) {
+    const totalInput = solarPower + (batteryPower > 0 ? batteryPower : 0);
+    if (totalInput <= 0) return 0;
+    return Math.round((acPower / totalInput) * 100);
 }
 
 function updateStatusBar(summary) {
@@ -651,6 +835,19 @@ async function updateCharts() {
                 rackChart.data.datasets[0].data = validData.map(d => d.temperature);
                 rackChart.data.datasets[1].data = validData.map(d => d.humidity);
                 rackChart.update('none');
+            }
+        }
+
+        // Update Battery chart - NEW
+        if (batteryChart) {
+            const batteryData = await fetchJson(`${API_BASE}/timeseries/pzem_dc_batt?hours=6`);
+            if (batteryData?.success && batteryData.data.length > 0) {
+                const validData = batteryData.data.filter(d => d.status === 'success');
+                batteryChart.data.labels = validData.map(d => formatTime(d.timestamp));
+                batteryChart.data.datasets[0].data = validData.map(d => d.voltage_v || 0);
+                batteryChart.data.datasets[1].data = validData.map(d => d.power_w || 0);
+                batteryChart.data.datasets[2].data = validData.map(d => d.soc_estimate || 0);
+                batteryChart.update('none');
             }
         }
 
